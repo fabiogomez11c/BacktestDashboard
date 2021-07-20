@@ -20,57 +20,14 @@ class HistoricYFinanceDataHandler:
 
         self._get_data_from_yfinance()
 
-    def _get_ranges(self):
-        
-        rans = []
-
-        # conver the stings into datetime
-
-        finish_date = dt.datetime.strptime(self.to_date, '%Y-%m-%d')
-        start_date = dt.datetime.strptime(self.from_date, '%Y-%m-%d')
-        end_loop = False
-        while True:
-            end_date = start_date + dt.timedelta(days=6)
-
-            if end_date >= finish_date:
-                end_date = finish_date
-                end_loop = True
-
-            rans.append(
-                [
-                    str(start_date.date()),
-                    str(end_date.date())
-                ]
-            )
-
-            start_date = end_date + dt.timedelta(days=1)
-
-            if end_loop:
-                break
-
-        return rans
-
     def _get_data_from_yfinance(self):
 
-        # creates the data frame that will have all the data
-        df = pd.DataFrame()
-
-        # create a range of dates
-        ranges = self._get_ranges()
-
         # iterate over the ranges and append into df
-        for iii, ii in enumerate(ranges):
-            print(f'Getting data for {self.symbol} - {ii}')
-            df_temp = yf.download(
-                self.symbol,
-                start=ii[0],
-                end=ii[1],
-                interval='1m',
-                progress=False
-            )
-            
-            # append into the df
-            df = df.append(df_temp)
+        df = yf.download(
+            self.symbol,
+            start=self.from_date,
+            end=self.to_date,
+        )
 
         df.index = df.index.tz_localize(None)
         self.data_df = df.copy()

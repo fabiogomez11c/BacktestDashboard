@@ -1,7 +1,7 @@
 from queue import Queue
 from events import OrderEvent, FillEvent, SignalEvent
-from data import KibotDataHandler
-from strategy import LongStrategy, PARAMS
+from data import HistoricYFinanceDataHandler
+from strategy import Strategy
 import pandas as pd
 import numpy as np
 import datetime as dt
@@ -25,6 +25,7 @@ class Backtester:
 
         self.amount = None
         self.running_amount = None
+        self.id = 1
 
         self.trades = pd.DataFrame()
 
@@ -34,9 +35,6 @@ class Backtester:
         multiprocessing.
         """       
 
-        # Converting the strategy_params into a namedtupled
-        strat_params = PARAMS(*strategy_params)
-
         # create the queue object
         self.event = Queue()
 
@@ -44,13 +42,10 @@ class Backtester:
         self.running_amount = self.amount
 
         # import the historical data and clean it
-        self.data = KibotDataHandler(self.event, self.symbol_list, self.from_to)
-
-        # cleaning some properties
-        self.open_trades = dict((k, {}) for k in self.data.symbol_list)
+        self.data = HistoricYFinanceDataHandler(self.event, self.symbol_list, self.from_to)
 
         # create the strategy instance
-        strategy = LongStrategy(self.event, self.data, strat_params)
+        strategy = Strategy(self.event, self.data)
 
         # run the loop
         while True:
@@ -87,15 +82,6 @@ class Backtester:
         # get and clean the trades
         self.trades = pd.DataFrame(self.closed_trades)
 
-    def trades_report(self):
-        """
-        Generates a trades report in a pandas dataframe
-        """
-
-        trades = Trades(pd.DataFrame(self.trades))
-
-        return trades
-
     def update_from_signal(self, event: SignalEvent):
         if event.type == 'SIGNAL':
             self._generate_order(event)
@@ -116,7 +102,8 @@ class Backtester:
         if information['type'] in ['Long', 'Short']:
 
             # we don't have any position
-            self.open_trades[sym]['UniqueID'] = shortuuid.ShortUUID().random(length=10)
+            self.open_trades[sym]['UniqueID'] = self.id
+            self.id += 1
             self.open_trades[sym]['Entry Date'] = information['datetime']
             self.open_trades[sym]['Entry Price'] = information['price']
             self.open_trades[sym]['Quantity'] = information['quantity']
