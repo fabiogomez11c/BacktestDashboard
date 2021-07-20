@@ -1,10 +1,9 @@
-from events import MarketEvent, SignalEvent, FillEvent
-from data import HistoricYFinanceDataHandler
+from src.events import MarketEvent, SignalEvent, FillEvent
+from src.data import HistoricYFinanceDataHandler
 from queue import Queue
 
 import numpy as np
 import pandas as pd
-import collections
 import datetime as dt
 from typing import Tuple
 
@@ -26,9 +25,48 @@ class Strategy:
 
         if event.type == 'MARKET':  # there is a new bar
             # get the bars needed
-            bars = self.data.get_latest_bars()
+            bars = self.data.get_latest_bars(10)
+            if len(bars) < 10:
+                return
+
+            close = [x[-2] for x in bars]
+            avg = np.mean(close)
 
             if len(self.CurrentPosition) == 0:
-                pass
+                # check for long signal
+                if close[-1] > avg:
+
+                    # create a long order
+                    information = {
+                        'datetime': bars[-1][0],
+                        'price': bars[-1][-2],
+                        'quantity': self.quantity,
+                        'amount': self.quantity * bars[-1][-2],
+                        'type': 'Long',
+                        'symbol': 'symbol'
+                    }
+
+                    # send the order
+                    signal = SignalEvent(information)
+                    self.events.put(signal)
+
+                    # update current position
+                    self.CurrentPosition = [information]
             else:
-                pass
+                # check for sell signal
+                if close[-1] < avg:
+
+                    # create a sell order
+                    information = {
+                        'datetime': bars[-1][0],
+                        'price': bars[-1][-2],
+                        'type': 'Exit',
+                        'symbol': 'symbol'
+                    }
+
+                    # send the order
+                    signal = SignalEvent(information)
+                    self.events.put(signal)
+
+                    # update the current position
+                    self.CurrentPosition = []

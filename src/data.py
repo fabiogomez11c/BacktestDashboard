@@ -4,7 +4,7 @@ from typing import Tuple, List
 import pandas as pd
 import datetime as dt
 import yfinance as yf
-from events import MarketEvent
+from src.events import MarketEvent
 
 
 class HistoricYFinanceDataHandler:

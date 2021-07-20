@@ -1,7 +1,7 @@
 from queue import Queue
-from events import OrderEvent, FillEvent, SignalEvent
-from data import HistoricYFinanceDataHandler
-from strategy import Strategy
+from src.events import OrderEvent, FillEvent, SignalEvent
+from src.data import HistoricYFinanceDataHandler
+from src.strategy import Strategy
 import pandas as pd
 import numpy as np
 import datetime as dt
@@ -29,7 +29,7 @@ class Backtester:
 
         self.trades = pd.DataFrame()
 
-    def run_backtest(self, strategy_params: Tuple):
+    def run_backtest(self):
         """
         This method runs the backtesting loop, it is designed to work with/without
         multiprocessing.
@@ -77,7 +77,6 @@ class Backtester:
                         self.update_from_order(the_event)
                     if the_event.type == 'FILL':
                         self.update_from_fill(the_event)
-                        strategy.update_from_fill(the_event)
 
         # get and clean the trades
         self.trades = pd.DataFrame(self.closed_trades)
@@ -102,37 +101,37 @@ class Backtester:
         if information['type'] in ['Long', 'Short']:
 
             # we don't have any position
-            self.open_trades[sym]['UniqueID'] = self.id
+            self.open_trades['UniqueID'] = self.id
             self.id += 1
-            self.open_trades[sym]['Entry Date'] = information['datetime']
-            self.open_trades[sym]['Entry Price'] = information['price']
-            self.open_trades[sym]['Quantity'] = information['quantity']
-            self.open_trades[sym]['Amount'] = information['amount']
-            self.open_trades[sym]['Type'] = information['type']
-            self.open_trades[sym]['Symbol'] = information['symbol']
+            self.open_trades['Entry Date'] = information['datetime']
+            self.open_trades['Entry Price'] = information['price']
+            self.open_trades['Quantity'] = information['quantity']
+            self.open_trades['Amount'] = information['amount']
+            self.open_trades['Type'] = information['type']
+            self.open_trades['Symbol'] = information['symbol']
 
         elif 'Exit' in information['type']:
 
             # we only have one open position
-            self.open_trades[sym]['Exit Date'] = information['datetime']
-            self.open_trades[sym]['Exit Price'] = information['price']
-            self.open_trades[sym]['Exit Type'] = information['type']
+            self.open_trades['Exit Date'] = information['datetime']
+            self.open_trades['Exit Price'] = information['price']
+            self.open_trades['Exit Type'] = information['type']
 
             # PnL computation
-            direction = 1 if self.open_trades[sym]['Type'] == 'Long' else -1
-            self.open_trades[sym]['Profit/Loss in Dollars'] = \
-                (self.open_trades[sym]['Exit Price'] - self.open_trades[sym]['Entry Price'])
-            self.open_trades[sym]['Profit/Loss in Dollars'] = \
-                self.open_trades[sym]['Profit/Loss in Dollars'] * self.open_trades[sym]['Quantity']
-            self.open_trades[sym]['Profit/Loss in Dollars'] *= direction
+            direction = 1 if self.open_trades['Type'] == 'Long' else -1
+            self.open_trades['Profit/Loss in Dollars'] = \
+                (self.open_trades['Exit Price'] - self.open_trades['Entry Price'])
+            self.open_trades['Profit/Loss in Dollars'] = \
+                self.open_trades['Profit/Loss in Dollars'] * self.open_trades['Quantity']
+            self.open_trades['Profit/Loss in Dollars'] *= direction
 
             # % PnL computation
-            self.open_trades[sym]['Profit/Loss in %'] = \
-                (self.open_trades[sym]['Profit/Loss in Dollars']/self.open_trades[sym]['Amount'])*100
+            self.open_trades['Profit/Loss in %'] = \
+                (self.open_trades['Profit/Loss in Dollars']/self.open_trades['Amount'])*100
 
             # update the running amount
-            self.running_amount += self.open_trades[sym]['Profit/Loss in Dollars']
+            self.running_amount += self.open_trades['Profit/Loss in Dollars']
 
             # storing and cleaning
-            self.closed_trades.append(self.open_trades[sym])
-            self.open_trades[sym] = {}
+            self.closed_trades.append(self.open_trades)
+            self.open_trades = {}
